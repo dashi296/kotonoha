@@ -21,6 +21,9 @@ export class OllamaAdapter implements ModelAdapter {
         stream: false,
       }),
     })
+    if (!response.ok) {
+      throw new Error(`Ollama API error: ${response.status} ${response.statusText}`)
+    }
     const data = await response.json()
     return data.response
   }
@@ -38,8 +41,13 @@ export class OllamaAdapter implements ModelAdapter {
         stream: true,
       }),
     })
-
-    const reader = response.body!.getReader()
+    if (!response.ok) {
+      throw new Error(`Ollama API error: ${response.status} ${response.statusText}`)
+    }
+    if (!response.body) {
+      throw new Error("Ollama API returned no response body")
+    }
+    const reader = response.body.getReader()
     const decoder = new TextDecoder()
 
     while (true) {
@@ -48,8 +56,13 @@ export class OllamaAdapter implements ModelAdapter {
 
       const text = decoder.decode(value)
       for (const line of text.split("\n").filter(Boolean)) {
-        const parsed = JSON.parse(line) as { response: string; done: boolean }
-        if (!parsed.done) yield parsed.response
+        try {
+          const parsed = JSON.parse(line) as { response: string; done: boolean }
+          if (parsed.response) yield parsed.response
+          if (parsed.done) return
+        } catch {
+          // skip malformed chunk
+        }
       }
     }
   }

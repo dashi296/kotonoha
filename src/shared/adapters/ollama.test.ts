@@ -28,6 +28,17 @@ describe("OllamaAdapter", () => {
       )
       expect(result).toBe("承知しました。")
     })
+
+    it("HTTP エラー時に例外を投げる", async () => {
+      mockFetch.mockResolvedValue({
+        ok: false,
+        status: 500,
+        statusText: "Internal Server Error",
+      })
+
+      const adapter = new OllamaAdapter("llama3")
+      await expect(adapter.generate("了解です", "ja")).rejects.toThrow("500")
+    })
   })
 
   describe("stream", () => {
@@ -54,7 +65,19 @@ describe("OllamaAdapter", () => {
         tokens.push(token)
       }
 
-      expect(tokens).toEqual(["承知", "しました"])
+      expect(tokens).toEqual(["承知", "しました", "。"])
+    })
+
+    it("HTTP エラー時に例外を投げる", async () => {
+      mockFetch.mockResolvedValue({
+        ok: false,
+        status: 500,
+        statusText: "Internal Server Error",
+      })
+
+      const adapter = new OllamaAdapter("llama3")
+      const gen = adapter.stream("了解です", "ja")
+      await expect(gen.next()).rejects.toThrow("500")
     })
   })
 })
