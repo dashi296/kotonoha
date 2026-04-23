@@ -13,4 +13,13 @@ describe("getI18n", () => {
     expect(dict.refineButton).toBe("Refine")
     expect(dict.copyButton).toBe("Copy")
   })
+
+  it("全キーがすべてのロケールで定義されている", () => {
+    for (const lang of ["ja", "en"] as const) {
+      const dict = getI18n(lang)
+      for (const key of Object.keys(dict) as (keyof typeof dict)[]) {
+        expect(dict[key]).toBeTruthy()
+      }
+    }
+  })
 })
