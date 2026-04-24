@@ -1,0 +1,17 @@
+export const POPULAR_OLLAMA_MODELS = [
+  "llama3.2",
+  "llama3.2:1b",
+  "llama3.2:3b",
+  "llama3.1",
+  "llama3.1:8b",
+  "gemma3",
+  "gemma3:2b",
+  "gemma3:9b",
+  "gemma3:27b",
+  "mistral",
+  "phi4",
+  "qwen2.5",
+  "qwen2.5:7b",
+  "deepseek-r1",
+  "deepseek-r1:7b",
+] as const
