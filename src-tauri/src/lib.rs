@@ -1,3 +1,6 @@
+mod commands;
+
+use commands::model_management::{cancel_pull, delete_model, list_models, start_pull, PullState};
 use std::net::TcpStream;
 use std::process::{Child, Command, Stdio};
 use std::sync::Mutex;
@@ -51,6 +54,7 @@ pub fn run() {
             };
             app.manage(OllamaInstalled(installed));
             app.manage(OllamaProcess(Mutex::new(child)));
+            app.manage(PullState::new());
             Ok(())
         })
         .on_window_event(|window, event| {
@@ -62,7 +66,13 @@ pub fn run() {
                 }
             }
         })
-        .invoke_handler(tauri::generate_handler![get_ollama_status])
+        .invoke_handler(tauri::generate_handler![
+            get_ollama_status,
+            list_models,
+            start_pull,
+            cancel_pull,
+            delete_model,
+        ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
 }
