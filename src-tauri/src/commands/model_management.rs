@@ -5,6 +5,14 @@ use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::Mutex;
 use tauri::{AppHandle, Emitter, State};
 
+fn map_request_err(e: reqwest::Error) -> String {
+    if e.is_connect() {
+        "Ollama に接続できません。Ollama が起動しているか確認してください。".to_string()
+    } else {
+        e.to_string()
+    }
+}
+
 pub struct PullState {
     pub client: Client,
     pub cancel_flag: AtomicBool,
@@ -65,7 +73,7 @@ pub async fn list_models(state: State<'_, PullState>) -> Result<Vec<ModelInfo>, 
         .get("http://localhost:11434/api/tags")
         .send()
         .await
-        .map_err(|e| e.to_string())?;
+        .map_err(map_request_err)?;
 
     if !response.status().is_success() {
         return Err(format!("Ollama API error: {}", response.status()));
@@ -106,7 +114,7 @@ pub async fn start_pull(
         .json(&serde_json::json!({ "model": model, "stream": true }))
         .send()
         .await
-        .map_err(|e| e.to_string())?;
+        .map_err(map_request_err)?;
 
     if !response.status().is_success() {
         return Err(format!("Ollama API error: {}", response.status()));
@@ -195,7 +203,7 @@ pub async fn delete_model(model: String, state: State<'_, PullState>) -> Result<
         .json(&serde_json::json!({ "model": model }))
         .send()
         .await
-        .map_err(|e| e.to_string())?;
+        .map_err(map_request_err)?;
 
     if !response.status().is_success() {
         return Err(format!("Failed to delete model: {}", response.status()));

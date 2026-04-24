@@ -28,6 +28,14 @@ describe("useModelManagement", () => {
     expect(mockInvoke).toHaveBeenCalledWith("list_models")
     expect(useOllamaModelStore.getState().models).toEqual(sampleModels)
     expect(result.current.pullPhase).toEqual({ phase: "idle" })
+    expect(result.current.ollamaError).toBeNull()
+  })
+
+  it("list_models が失敗すると ollamaError にメッセージが入る", async () => {
+    mockInvoke.mockRejectedValueOnce("Ollama に接続できません。Ollama が起動しているか確認してください。")
+    const { result } = renderHook(() => useModelManagement())
+    await act(async () => {})
+    expect(result.current.ollamaError).toContain("Ollama")
   })
 
   it("pullModel を呼ぶと phase が pulling になる", async () => {

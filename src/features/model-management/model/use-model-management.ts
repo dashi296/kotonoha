@@ -8,15 +8,21 @@ import type { PullPhase, PullProgress } from "./types"
 export function useModelManagement() {
   const { setModels } = useOllamaModelStore()
   const [pullPhase, setPullPhase] = useState<PullPhase>({ phase: "idle" })
+  const [ollamaError, setOllamaError] = useState<string | null>(null)
   const unlistenRef = useRef<(() => void) | null>(null)
 
   const refreshModels = useCallback(async () => {
-    const models = await invoke<OllamaModel[]>("list_models")
-    setModels(models)
+    try {
+      const models = await invoke<OllamaModel[]>("list_models")
+      setModels(models)
+      setOllamaError(null)
+    } catch (e) {
+      setOllamaError(String(e))
+    }
   }, [setModels])
 
   useEffect(() => {
-    refreshModels().catch(console.error)
+    refreshModels()
   }, [refreshModels])
 
   const pullModel = useCallback(async (model: string) => {
@@ -56,5 +62,5 @@ export function useModelManagement() {
     await refreshModels()
   }, [refreshModels])
 
-  return { pullPhase, pullModel, cancelPull, deleteModel, refreshModels }
+  return { pullPhase, pullModel, cancelPull, deleteModel, refreshModels, ollamaError }
 }

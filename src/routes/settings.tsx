@@ -9,10 +9,15 @@ export const Route = createFileRoute("/settings")({
 
 function SettingsPage() {
   const { models, selectedModel, setSelectedModel } = useOllamaModelStore()
-  const { pullPhase, pullModel, cancelPull, deleteModel } = useModelManagement()
+  const { pullPhase, pullModel, cancelPull, deleteModel, ollamaError } = useModelManagement()
 
   return (
     <div className="max-w-lg mx-auto p-6 flex flex-col gap-6">
+      {ollamaError && (
+        <div className="rounded border border-destructive/50 bg-destructive/10 px-3 py-2 text-sm text-destructive">
+          {ollamaError}
+        </div>
+      )}
       <div className="flex items-center gap-2">
         <Link to="/">
           <Button variant="ghost" size="sm">← 戻る</Button>
