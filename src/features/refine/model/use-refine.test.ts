@@ -8,15 +8,16 @@ async function* mockStream(tokens: string[]) {
   for (const token of tokens) yield token
 }
 
+const mockStreamFn = vi.fn().mockReturnValue(mockStream(["承知", "しました", "。"]))
+
 vi.mock("@/shared/adapters/ollama", () => ({
   OllamaAdapter: vi.fn().mockImplementation(function () {
-    return {
-      stream: vi.fn().mockReturnValue(mockStream(["承知", "しました", "。"])),
-    }
+    return { stream: mockStreamFn }
   }),
 }))
 
 beforeEach(() => {
+  mockStreamFn.mockReturnValue(mockStream(["承知", "しました", "。"]))
   useRefinementStore.getState().reset()
   useRefinementStore.getState().setInput("了解です")
   useOllamaModelStore.getState().setSelectedModel("llama3")
@@ -42,6 +43,21 @@ describe("useRefine", () => {
     })
 
     expect(useRefinementStore.getState().input).toBe("了解です")
+  })
+
+  it("stream エラー時は error がセットされ isStreaming が false になる", async () => {
+    mockStreamFn.mockImplementation(async function* () {
+      throw new Error("Ollama API error: 503 Service Unavailable")
+    })
+
+    const { result } = renderHook(() => useRefine())
+    await act(async () => {
+      await result.current.refine("ja")
+    })
+
+    expect(useRefinementStore.getState().error).toContain("503")
+    expect(useRefinementStore.getState().isStreaming).toBe(false)
+    expect(useRefinementStore.getState().output).toBe("")
   })
 
   it("refine 実行中は isStreaming が true になる", async () => {

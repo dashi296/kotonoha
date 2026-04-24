@@ -4,17 +4,21 @@ import { OllamaAdapter } from "@/shared/adapters/ollama"
 import type { SupportedLanguage } from "@/shared/adapters"
 
 export function useRefine() {
-  const { input, setOutput, appendOutput, setIsStreaming } = useRefinementStore()
+  const { input, setOutput, appendOutput, setIsStreaming, setError } = useRefinementStore()
   const { selectedModel } = useOllamaModelStore()
 
   const refine = async (lang: SupportedLanguage) => {
     setOutput("")
+    setError(null)
     setIsStreaming(true)
     const adapter = new OllamaAdapter(selectedModel)
     try {
       for await (const chunk of adapter.stream(input, lang)) {
         appendOutput(chunk)
       }
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "変換中にエラーが発生しました"
+      setError(message)
     } finally {
       setIsStreaming(false)
     }

@@ -13,9 +13,11 @@ export interface RefinementState {
   input: string
   output: string
   isStreaming: boolean
+  error: string | null
   setInput: (input: string) => void
   setOutput: (output: string) => void
   appendOutput: (chunk: string) => void
   setIsStreaming: (value: boolean) => void
+  setError: (error: string | null) => void
   reset: () => void
 }

@@ -12,6 +12,7 @@ describe("useRefinementStore", () => {
     expect(state.input).toBe("")
     expect(state.output).toBe("")
     expect(state.isStreaming).toBe(false)
+    expect(state.error).toBeNull()
   })
 
   it("setInput で input が更新される", () => {

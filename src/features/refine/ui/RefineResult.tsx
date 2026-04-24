@@ -8,7 +8,15 @@ interface RefineResultProps {
 }
 
 export function RefineResult({ dict, onCopy }: RefineResultProps) {
-  const { output, isStreaming } = useRefinementStore()
+  const { output, isStreaming, error } = useRefinementStore()
+
+  if (error) {
+    return (
+      <div className="rounded-md border border-destructive bg-destructive/10 p-3 text-sm text-destructive">
+        {error}
+      </div>
+    )
+  }
 
   if (!output && !isStreaming) return null
 
