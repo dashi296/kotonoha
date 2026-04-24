@@ -17,8 +17,14 @@ export function useRefine() {
         appendOutput(chunk)
       }
     } catch (err) {
-      const message = err instanceof Error ? err.message : "変換中にエラーが発生しました"
-      setError(message)
+      console.error("[useRefine] error:", err)
+      const message =
+        err instanceof Error
+          ? err.message
+          : typeof err === "string"
+            ? err
+            : JSON.stringify(err)
+      setError(message || "変換中にエラーが発生しました")
     } finally {
       setIsStreaming(false)
     }
