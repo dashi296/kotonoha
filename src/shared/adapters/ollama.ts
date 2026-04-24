@@ -1,3 +1,4 @@
+import { fetch } from "@tauri-apps/plugin-http"
 import { buildPrompt } from "@/shared/prompts"
 import type { ModelAdapter, SupportedLanguage } from "./types"
 

@@ -6,6 +6,10 @@
   "permissions": [
     "core:default",
     "opener:default",
-    "clipboard-manager:default"
+    "clipboard-manager:default",
+    {
+      "identifier": "http:default",
+      "allow": [{ "url": "http://localhost:11434/**" }]
+    }
   ]
 }

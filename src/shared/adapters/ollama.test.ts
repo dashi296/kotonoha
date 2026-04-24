@@ -1,8 +1,11 @@
 import { describe, it, expect, vi, beforeEach } from "vitest"
 import { OllamaAdapter } from "./ollama"
 
-const mockFetch = vi.fn()
-vi.stubGlobal("fetch", mockFetch)
+const mockFetch = vi.hoisted(() => vi.fn())
+
+vi.mock("@tauri-apps/plugin-http", () => ({
+  fetch: mockFetch,
+}))
 
 describe("OllamaAdapter", () => {
   beforeEach(() => {
