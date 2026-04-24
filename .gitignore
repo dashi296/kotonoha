@@ -23,3 +23,6 @@ dist-ssr
 *.sln
 *.sw?
 .superpowers/
+
+# Ollama sidecar binaries (downloaded via scripts/download-ollama.sh)
+src-tauri/binaries/
