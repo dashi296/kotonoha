@@ -1,0 +1,78 @@
+import { describe, it, expect, vi, beforeEach } from "vitest"
+import { renderHook, act } from "@testing-library/react"
+import { useRefine } from "./use-refine"
+import { useRefinementStore } from "@/entities/refinement"
+import { useOllamaModelStore } from "@/entities/ollama-model"
+
+async function* mockStream(tokens: string[]) {
+  for (const token of tokens) yield token
+}
+
+const mockStreamFn = vi.fn().mockReturnValue(mockStream(["承知", "しました", "。"]))
+
+vi.mock("@/shared/adapters/ollama", () => ({
+  OllamaAdapter: vi.fn().mockImplementation(function () {
+    return { stream: mockStreamFn }
+  }),
+}))
+
+beforeEach(() => {
+  mockStreamFn.mockReturnValue(mockStream(["承知", "しました", "。"]))
+  useRefinementStore.getState().reset()
+  useRefinementStore.getState().setInput("了解です")
+  useOllamaModelStore.getState().setSelectedModel("llama3")
+})
+
+describe("useRefine", () => {
+  it("refine を呼ぶとストリーミングで output が更新される", async () => {
+    const { result } = renderHook(() => useRefine())
+
+    await act(async () => {
+      await result.current.refine("ja")
+    })
+
+    expect(useRefinementStore.getState().output).toBe("承知しました。")
+    expect(useRefinementStore.getState().isStreaming).toBe(false)
+  })
+
+  it("refine を呼んでも input は消えない", async () => {
+    const { result } = renderHook(() => useRefine())
+
+    await act(async () => {
+      await result.current.refine("ja")
+    })
+
+    expect(useRefinementStore.getState().input).toBe("了解です")
+  })
+
+  it("stream エラー時は error がセットされ isStreaming が false になる", async () => {
+    mockStreamFn.mockImplementation(async function* () {
+      throw new Error("Ollama API error: 503 Service Unavailable")
+    })
+
+    const { result } = renderHook(() => useRefine())
+    await act(async () => {
+      await result.current.refine("ja")
+    })
+
+    expect(useRefinementStore.getState().error).toContain("503")
+    expect(useRefinementStore.getState().isStreaming).toBe(false)
+    expect(useRefinementStore.getState().output).toBe("")
+  })
+
+  it("refine 実行中は isStreaming が true になる", async () => {
+    const states: boolean[] = []
+    const unsubscribe = useRefinementStore.subscribe((s) =>
+      states.push(s.isStreaming)
+    )
+
+    const { result } = renderHook(() => useRefine())
+    await act(async () => {
+      await result.current.refine("ja")
+    })
+
+    unsubscribe()
+    expect(states).toContain(true)
+    expect(useRefinementStore.getState().isStreaming).toBe(false)
+  })
+})

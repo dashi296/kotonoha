@@ -47,6 +47,10 @@ type SupportedLanguage = "ja" | "en"
 - Avoid over-engineering
 - Focus on UX
 
+## Architecture
+
+@docs/architecture.md
+
 ## Feature Roadmap
 
 1. Text transform
