@@ -4,11 +4,11 @@ import { OllamaAdapter } from "@/shared/adapters/ollama"
 import type { SupportedLanguage } from "@/shared/adapters"
 
 export function useRefine() {
-  const { input, reset, appendOutput, setIsStreaming } = useRefinementStore()
+  const { input, setOutput, appendOutput, setIsStreaming } = useRefinementStore()
   const { selectedModel } = useOllamaModelStore()
 
   const refine = async (lang: SupportedLanguage) => {
-    reset()
+    setOutput("")
     setIsStreaming(true)
     const adapter = new OllamaAdapter(selectedModel)
     try {

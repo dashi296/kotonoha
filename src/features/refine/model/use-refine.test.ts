@@ -34,6 +34,16 @@ describe("useRefine", () => {
     expect(useRefinementStore.getState().isStreaming).toBe(false)
   })
 
+  it("refine を呼んでも input は消えない", async () => {
+    const { result } = renderHook(() => useRefine())
+
+    await act(async () => {
+      await result.current.refine("ja")
+    })
+
+    expect(useRefinementStore.getState().input).toBe("了解です")
+  })
+
   it("refine 実行中は isStreaming が true になる", async () => {
     const states: boolean[] = []
     const unsubscribe = useRefinementStore.subscribe((s) =>
