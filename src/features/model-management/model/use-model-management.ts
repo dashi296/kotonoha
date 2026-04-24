@@ -27,6 +27,7 @@ export function useModelManagement() {
       if (progress.status === "success") {
         setPullPhase({ phase: "success" })
         refreshModels().catch(console.error)
+        setTimeout(() => setPullPhase({ phase: "idle" }), 3000)
       } else {
         setPullPhase({ phase: "pulling", progress })
       }

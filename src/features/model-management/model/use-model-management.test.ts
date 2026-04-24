@@ -56,6 +56,18 @@ describe("useModelManagement", () => {
     expect(result.current.pullPhase.phase).toBe("success")
   })
 
+  it("cancelPull を呼ぶと cancel_pull を invoke し phase が idle になる", async () => {
+    const { result } = renderHook(() => useModelManagement())
+    await act(async () => {})
+
+    await act(async () => {
+      await result.current.cancelPull()
+    })
+
+    expect(mockInvoke).toHaveBeenCalledWith("cancel_pull")
+    expect(result.current.pullPhase).toEqual({ phase: "idle" })
+  })
+
   it("deleteModel を呼ぶと delete_model を invoke し一覧を再取得する", async () => {
     const { result } = renderHook(() => useModelManagement())
     await act(async () => {})

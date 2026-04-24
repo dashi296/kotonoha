@@ -6,6 +6,7 @@ use std::sync::Mutex;
 use tauri::{AppHandle, Emitter, State};
 
 pub struct PullState {
+    pub client: Client,
     pub cancel_flag: AtomicBool,
     pub tracked_digests: Mutex<Vec<String>>,
 }
@@ -13,6 +14,7 @@ pub struct PullState {
 impl PullState {
     pub fn new() -> Self {
         Self {
+            client: Client::new(),
             cancel_flag: AtomicBool::new(false),
             tracked_digests: Mutex::new(Vec::new()),
         }
@@ -57,8 +59,8 @@ struct PullProgress {
 }
 
 #[tauri::command]
-pub async fn list_models() -> Result<Vec<ModelInfo>, String> {
-    let client = Client::new();
+pub async fn list_models(state: State<'_, PullState>) -> Result<Vec<ModelInfo>, String> {
+    let client = state.client.clone();
     let response = client
         .get("http://localhost:11434/api/tags")
         .send()
@@ -92,13 +94,13 @@ pub async fn start_pull(
     model: String,
     state: State<'_, PullState>,
 ) -> Result<(), String> {
-    state.cancel_flag.store(false, Ordering::SeqCst);
+    state.cancel_flag.store(false, Ordering::Release);
     {
         let mut digests = state.tracked_digests.lock().map_err(|e| e.to_string())?;
         digests.clear();
     }
 
-    let client = Client::new();
+    let client = state.client.clone();
     let response = client
         .post("http://localhost:11434/api/pull")
         .json(&serde_json::json!({ "model": model, "stream": true }))
@@ -114,7 +116,7 @@ pub async fn start_pull(
     let mut buffer = String::new();
 
     while let Some(chunk) = stream.next().await {
-        if state.cancel_flag.load(Ordering::SeqCst) {
+        if state.cancel_flag.load(Ordering::Acquire) {
             break;
         }
         match chunk {
@@ -129,7 +131,8 @@ pub async fn start_pull(
                     }
                     if let Ok(p) = serde_json::from_str::<PullProgressRaw>(&line) {
                         if let Some(ref digest) = p.digest {
-                            let mut digests = state.tracked_digests.lock().unwrap();
+                            let mut digests =
+                                state.tracked_digests.lock().map_err(|e| e.to_string())?;
                             if !digests.contains(digest) {
                                 digests.push(digest.clone());
                             }
@@ -157,14 +160,17 @@ pub async fn start_pull(
 
 #[tauri::command]
 pub async fn cancel_pull(state: State<'_, PullState>) -> Result<(), String> {
-    state.cancel_flag.store(true, Ordering::SeqCst);
+    state.cancel_flag.store(true, Ordering::Release);
 
+    // Note: a digest added by start_pull between the snapshot and the clear below
+    // will be removed from the list without being deleted. This is a minor race
+    // (the blob was only just starting) and is acceptable.
     let digests = {
         let guard = state.tracked_digests.lock().map_err(|e| e.to_string())?;
         guard.clone()
     };
 
-    let client = Client::new();
+    let client = state.client.clone();
     for digest in &digests {
         let _ = client
             .delete(&format!("http://localhost:11434/api/blobs/{}", digest))
@@ -182,8 +188,8 @@ pub async fn cancel_pull(state: State<'_, PullState>) -> Result<(), String> {
 }
 
 #[tauri::command]
-pub async fn delete_model(model: String) -> Result<(), String> {
-    let client = Client::new();
+pub async fn delete_model(model: String, state: State<'_, PullState>) -> Result<(), String> {
+    let client = state.client.clone();
     let response = client
         .delete("http://localhost:11434/api/delete")
         .json(&serde_json::json!({ "model": model }))

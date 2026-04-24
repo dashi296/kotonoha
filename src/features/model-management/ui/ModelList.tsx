@@ -25,7 +25,7 @@ export function ModelList({ models, onDelete }: ModelListProps) {
           </div>
           <button
             className="text-destructive hover:underline text-sm"
-            onClick={() => onDelete(model.name)}
+            onClick={() => onDelete(model.name).catch(console.error)}
           >
             削除
           </button>
