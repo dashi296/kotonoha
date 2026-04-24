@@ -12,23 +12,6 @@ export class OllamaAdapter implements ModelAdapter {
     this.baseUrl = baseUrl
   }
 
-  async generate(prompt: string, lang: SupportedLanguage): Promise<string> {
-    const response = await fetch(`${this.baseUrl}/api/generate`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        model: this.model,
-        prompt: buildPrompt(prompt, lang),
-        stream: false,
-      }),
-    })
-    if (!response.ok) {
-      throw new Error(`Ollama API error: ${response.status} ${response.statusText}`)
-    }
-    const data = await response.json()
-    return data.response
-  }
-
   async *stream(
     prompt: string,
     lang: SupportedLanguage
@@ -50,19 +33,23 @@ export class OllamaAdapter implements ModelAdapter {
     }
     const reader = response.body.getReader()
     const decoder = new TextDecoder()
+    let buffer = ""
 
     while (true) {
       const { done, value } = await reader.read()
       if (done) break
 
-      const text = decoder.decode(value)
-      for (const line of text.split("\n").filter(Boolean)) {
+      buffer += decoder.decode(value, { stream: true })
+      const lines = buffer.split("\n")
+      buffer = lines.pop() ?? ""
+
+      for (const line of lines.filter(Boolean)) {
         try {
           const parsed = JSON.parse(line) as { response: string; done: boolean }
           if (parsed.response) yield parsed.response
           if (parsed.done) return
         } catch {
-          // skip malformed chunk
+          // skip malformed line
         }
       }
     }

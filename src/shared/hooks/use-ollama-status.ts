@@ -8,18 +8,26 @@ export function useOllamaStatus() {
 
   useEffect(() => {
     let cancelled = false
+    let timer: ReturnType<typeof setTimeout>
 
     const check = async () => {
-      const s = await invoke<OllamaStatus>("get_ollama_status")
-      if (cancelled) return
-      setStatus(s)
-      if (s === "starting") {
-        setTimeout(check, 2000)
+      try {
+        const s = await invoke<OllamaStatus>("get_ollama_status")
+        if (cancelled) return
+        setStatus(s)
+        if (s === "starting") {
+          timer = setTimeout(check, 2000)
+        }
+      } catch {
+        if (!cancelled) setStatus("not_installed")
       }
     }
 
     check()
-    return () => { cancelled = true }
+    return () => {
+      cancelled = true
+      clearTimeout(timer)
+    }
   }, [])
 
   return status

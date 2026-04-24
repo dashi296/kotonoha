@@ -4,8 +4,9 @@ use std::sync::Mutex;
 use tauri::Manager;
 
 struct OllamaProcess(Mutex<Option<Child>>);
+struct OllamaInstalled(bool);
 
-fn is_ollama_installed() -> bool {
+fn check_ollama_installed() -> bool {
     Command::new("ollama")
         .arg("--version")
         .stdout(Stdio::null())
@@ -19,8 +20,8 @@ fn is_ollama_running() -> bool {
 }
 
 #[tauri::command]
-fn get_ollama_status() -> &'static str {
-    if !is_ollama_installed() {
+fn get_ollama_status(installed: tauri::State<OllamaInstalled>) -> &'static str {
+    if !installed.0 {
         return "not_installed";
     }
     if is_ollama_running() {
@@ -37,7 +38,8 @@ pub fn run() {
         .plugin(tauri_plugin_clipboard_manager::init())
         .plugin(tauri_plugin_http::init())
         .setup(|app| {
-            let child = if is_ollama_installed() && !is_ollama_running() {
+            let installed = check_ollama_installed();
+            let child = if installed && !is_ollama_running() {
                 Command::new("ollama")
                     .arg("serve")
                     .stdout(Stdio::null())
@@ -47,6 +49,7 @@ pub fn run() {
             } else {
                 None
             };
+            app.manage(OllamaInstalled(installed));
             app.manage(OllamaProcess(Mutex::new(child)));
             Ok(())
         })
