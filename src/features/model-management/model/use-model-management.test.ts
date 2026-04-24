@@ -31,6 +31,14 @@ describe("useModelManagement", () => {
     expect(result.current.ollamaError).toBeNull()
   })
 
+  it("selectedModel がインストール済みモデルにない場合は先頭モデルを自動選択する", async () => {
+    useOllamaModelStore.getState().setSelectedModel("llama3")
+    mockInvoke.mockResolvedValueOnce(sampleModels)
+    renderHook(() => useModelManagement())
+    await act(async () => {})
+    expect(useOllamaModelStore.getState().selectedModel).toBe("llama3.2")
+  })
+
   it("list_models が失敗すると ollamaError にメッセージが入る", async () => {
     mockInvoke.mockRejectedValueOnce("Ollama に接続できません。Ollama が起動しているか確認してください。")
     const { result } = renderHook(() => useModelManagement())

@@ -6,7 +6,7 @@ import type { OllamaModel } from "@/entities/ollama-model"
 import type { PullPhase, PullProgress } from "./types"
 
 export function useModelManagement() {
-  const { setModels } = useOllamaModelStore()
+  const { setModels, setSelectedModel } = useOllamaModelStore()
   const [pullPhase, setPullPhase] = useState<PullPhase>({ phase: "idle" })
   const [ollamaError, setOllamaError] = useState<string | null>(null)
   const unlistenRef = useRef<(() => void) | null>(null)
@@ -16,10 +16,14 @@ export function useModelManagement() {
       const models = await invoke<OllamaModel[]>("list_models")
       setModels(models)
       setOllamaError(null)
+      const current = useOllamaModelStore.getState().selectedModel
+      if (models.length > 0 && !models.some((m) => m.name === current)) {
+        setSelectedModel(models[0].name)
+      }
     } catch (e) {
       setOllamaError(String(e))
     }
-  }, [setModels])
+  }, [setModels, setSelectedModel])
 
   useEffect(() => {
     refreshModels()

@@ -6,8 +6,8 @@ beforeEach(() => {
 })
 
 describe("useOllamaModelStore", () => {
-  it("デフォルトモデルが llama3 である", () => {
-    expect(useOllamaModelStore.getState().selectedModel).toBe("llama3")
+  it("デフォルトモデルが llama3.2 である", () => {
+    expect(useOllamaModelStore.getState().selectedModel).toBe("llama3.2")
   })
 
   it("setSelectedModel でモデルが更新される", () => {
