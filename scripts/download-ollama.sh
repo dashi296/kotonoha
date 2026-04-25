@@ -12,6 +12,7 @@ DEST="$BINARIES_DIR/ollama-$TARGET"
 
 if [[ -f "$DEST" ]]; then
   echo "ollama-$TARGET already exists, skipping download."
+  echo "To upgrade, delete $DEST and re-run this script."
   exit 0
 fi
 

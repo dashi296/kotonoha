@@ -7,7 +7,7 @@ use tauri::{AppHandle, Emitter, State};
 
 fn map_request_err(e: reqwest::Error) -> String {
     if e.is_connect() {
-        "Ollama に接続できません。Ollama が起動しているか確認してください。".to_string()
+        "Ollama に接続できません。アプリを再起動してください。".to_string()
     } else {
         e.to_string()
     }
