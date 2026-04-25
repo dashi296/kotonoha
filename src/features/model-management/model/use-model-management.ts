@@ -17,6 +17,8 @@ export function useModelManagement() {
   useEffect(() => {
     return () => {
       if (successTimerRef.current) clearTimeout(successTimerRef.current)
+      unlistenRef.current?.()
+      unlistenRef.current = null
     }
   }, [])
 
