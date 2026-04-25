@@ -163,7 +163,11 @@ pub async fn start_pull(
         }
     }
 
-    Ok(())
+    if state.cancel_flag.load(Ordering::Acquire) {
+        Ok(())
+    } else {
+        Err("ダウンロードが中断されました。再度お試しください。".to_string())
+    }
 }
 
 #[tauri::command]

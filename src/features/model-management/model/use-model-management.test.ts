@@ -8,6 +8,7 @@ const mockListen = vi.hoisted(() => vi.fn())
 
 vi.mock("@tauri-apps/api/core", () => ({ invoke: mockInvoke }))
 vi.mock("@tauri-apps/api/event", () => ({ listen: mockListen }))
+vi.mock("@/shared/hooks/use-ollama-status", () => ({ useOllamaStatus: () => "running" }))
 
 const sampleModels = [
   { name: "llama3.2", size: 2000000000, modified_at: "2024-01-01T00:00:00Z", digest: "sha256:abc" },

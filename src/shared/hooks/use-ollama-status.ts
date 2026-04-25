@@ -23,10 +23,15 @@ export function useOllamaStatus() {
             timer = setTimeout(check, 2000)
           } else {
             setStatus("not_installed")
+            // Keep polling slowly so the UI recovers if Ollama eventually starts
+            timer = setTimeout(() => { retries = 0; check() }, 5000)
           }
         }
       } catch {
-        if (!cancelled) setStatus("not_installed")
+        if (!cancelled) {
+          setStatus("not_installed")
+          timer = setTimeout(check, 5000)
+        }
       }
     }
 

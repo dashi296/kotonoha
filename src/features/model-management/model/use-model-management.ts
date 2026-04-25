@@ -3,6 +3,7 @@ import { listen } from "@tauri-apps/api/event"
 import { useCallback, useEffect, useRef, useState } from "react"
 import { useOllamaModelStore } from "@/entities/ollama-model"
 import type { OllamaModel } from "@/entities/ollama-model"
+import { useOllamaStatus } from "@/shared/hooks/use-ollama-status"
 import type { PullPhase, PullProgress } from "./types"
 
 export function useModelManagement() {
@@ -11,6 +12,7 @@ export function useModelManagement() {
   const [ollamaError, setOllamaError] = useState<string | null>(null)
   const unlistenRef = useRef<(() => void) | null>(null)
   const successTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const ollamaStatus = useOllamaStatus()
 
   useEffect(() => {
     return () => {
@@ -33,8 +35,10 @@ export function useModelManagement() {
   }, [setModels, setSelectedModel])
 
   useEffect(() => {
-    refreshModels()
-  }, [refreshModels])
+    if (ollamaStatus === "running") {
+      refreshModels()
+    }
+  }, [ollamaStatus, refreshModels])
 
   const pullModel = useCallback(async (model: string) => {
     setPullPhase({ phase: "pulling", progress: { status: "starting" } })
