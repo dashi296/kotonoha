@@ -46,6 +46,25 @@ describe("useModelManagement", () => {
     expect(result.current.ollamaError).toContain("Ollama")
   })
 
+  it("pullModel が start_pull で失敗すると phase が error になる", async () => {
+    mockInvoke.mockImplementation((cmd: string) => {
+      if (cmd === "start_pull") return Promise.reject("Ollama に接続できません")
+      return Promise.resolve([])
+    })
+
+    const { result } = renderHook(() => useModelManagement())
+    await act(async () => {})
+
+    await act(async () => {
+      await result.current.pullModel("llama3.2")
+    })
+
+    expect(result.current.pullPhase).toEqual({
+      phase: "error",
+      message: "Ollama に接続できません",
+    })
+  })
+
   it("pullModel を呼ぶと phase が pulling になる", async () => {
     let progressCallback: ((e: { payload: unknown }) => void) | null = null
     mockListen.mockImplementation((_event: string, cb: (e: { payload: unknown }) => void) => {

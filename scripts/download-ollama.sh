@@ -1,7 +1,8 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-OLLAMA_VERSION="v0.21.2"
+OLLAMA_VERSION=$(curl -s https://api.github.com/repos/ollama/ollama/releases/latest \
+  | grep '"tag_name"' | head -1 | cut -d'"' -f4)
 BINARIES_DIR="$(dirname "$0")/../src-tauri/binaries"
 
 mkdir -p "$BINARIES_DIR"

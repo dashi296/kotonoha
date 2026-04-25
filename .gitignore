@@ -26,3 +26,6 @@ dist-ssr
 
 # Ollama sidecar binaries (downloaded via scripts/download-ollama.sh)
 src-tauri/binaries/
+
+# Superpowers agent internal files
+docs/superpowers/

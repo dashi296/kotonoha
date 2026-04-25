@@ -10,6 +10,13 @@ export function useModelManagement() {
   const [pullPhase, setPullPhase] = useState<PullPhase>({ phase: "idle" })
   const [ollamaError, setOllamaError] = useState<string | null>(null)
   const unlistenRef = useRef<(() => void) | null>(null)
+  const successTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+
+  useEffect(() => {
+    return () => {
+      if (successTimerRef.current) clearTimeout(successTimerRef.current)
+    }
+  }, [])
 
   const refreshModels = useCallback(async () => {
     try {
@@ -37,7 +44,8 @@ export function useModelManagement() {
       if (progress.status === "success") {
         setPullPhase({ phase: "success" })
         refreshModels().catch(console.error)
-        setTimeout(() => setPullPhase({ phase: "idle" }), 3000)
+        if (successTimerRef.current) clearTimeout(successTimerRef.current)
+        successTimerRef.current = setTimeout(() => setPullPhase({ phase: "idle" }), 3000)
       } else {
         setPullPhase({ phase: "pulling", progress })
       }
