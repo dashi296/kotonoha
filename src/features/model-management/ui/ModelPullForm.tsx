@@ -1,4 +1,4 @@
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { POPULAR_OLLAMA_MODELS } from "@/shared/constants/ollama-models"
 import type { PullPhase } from "../model/types"
 
@@ -12,10 +12,13 @@ export function ModelPullForm({ pullPhase, onPull, onCancel }: ModelPullFormProp
   const [modelName, setModelName] = useState("")
   const isPulling = pullPhase.phase === "pulling"
 
+  useEffect(() => {
+    if (pullPhase.phase === "success") setModelName("")
+  }, [pullPhase.phase])
+
   const handlePull = async () => {
     if (!modelName.trim()) return
     await onPull(modelName.trim())
-    setModelName("")
   }
 
   const progress =

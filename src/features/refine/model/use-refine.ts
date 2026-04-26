@@ -8,6 +8,10 @@ export function useRefine() {
   const { selectedModel } = useOllamaModelStore()
 
   const refine = async (lang: SupportedLanguage) => {
+    if (!selectedModel) {
+      setError("モデルが選択されていません。設定画面でモデルをインストールしてください。")
+      return
+    }
     setOutput("")
     setError(null)
     setIsStreaming(true)
