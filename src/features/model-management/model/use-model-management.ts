@@ -28,7 +28,9 @@ export function useModelManagement() {
       setModels(models)
       setOllamaError(null)
       const current = useOllamaModelStore.getState().selectedModel
-      if (models.length > 0 && !models.some((m) => m.name === current)) {
+      if (models.length === 0) {
+        setSelectedModel("")
+      } else if (!models.some((m) => m.name === current)) {
         setSelectedModel(models[0].name)
       }
     } catch (e) {
@@ -43,6 +45,10 @@ export function useModelManagement() {
   }, [ollamaStatus, refreshModels])
 
   const pullModel = useCallback(async (model: string) => {
+    if (successTimerRef.current) {
+      clearTimeout(successTimerRef.current)
+      successTimerRef.current = null
+    }
     setPullPhase({ phase: "pulling", progress: { status: "starting" } })
 
     const unlisten = await listen<PullProgress>("pull_progress", (event) => {

@@ -138,11 +138,15 @@ pub async fn start_pull(
                         continue;
                     }
                     if let Ok(p) = serde_json::from_str::<PullProgressRaw>(&line) {
-                        if let Some(ref digest) = p.digest {
-                            let mut digests =
-                                state.tracked_digests.lock().map_err(|e| e.to_string())?;
-                            if !digests.contains(digest) {
-                                digests.push(digest.clone());
+                        // Only track digests for layers being newly downloaded.
+                        // "already exists" layers are shared with other models and must not be deleted on cancel.
+                        if p.status.starts_with("pulling") {
+                            if let Some(ref digest) = p.digest {
+                                let mut digests =
+                                    state.tracked_digests.lock().map_err(|e| e.to_string())?;
+                                if !digests.contains(digest) {
+                                    digests.push(digest.clone());
+                                }
                             }
                         }
                         let _ = app.emit(
