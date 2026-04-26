@@ -17,7 +17,9 @@ export function Providers({ children }: ProvidersProps) {
     invoke<OllamaModel[]>("list_models").then((models) => {
       setModels(models)
       const current = useOllamaModelStore.getState().selectedModel
-      if (models.length > 0 && !models.some((m) => m.name === current)) {
+      if (models.length === 0) {
+        setSelectedModel("")
+      } else if (!models.some((m) => m.name === current)) {
         setSelectedModel(models[0].name)
       }
     }).catch(() => {})

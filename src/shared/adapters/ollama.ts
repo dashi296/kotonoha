@@ -37,9 +37,7 @@ export class OllamaAdapter implements ModelAdapter {
 
     while (true) {
       const { done, value } = await reader.read()
-      if (done) break
-
-      buffer += decoder.decode(value, { stream: true })
+      buffer += done ? decoder.decode() : decoder.decode(value, { stream: true })
       const lines = buffer.split("\n")
       buffer = lines.pop() ?? ""
 
@@ -51,6 +49,17 @@ export class OllamaAdapter implements ModelAdapter {
         } catch {
           // skip malformed line
         }
+      }
+
+      if (done) {
+        // Flush any content remaining in buffer when stream closes without trailing newline
+        if (buffer.trim()) {
+          try {
+            const parsed = JSON.parse(buffer) as { response: string; done: boolean }
+            if (parsed.response) yield parsed.response
+          } catch {}
+        }
+        break
       }
     }
   }
