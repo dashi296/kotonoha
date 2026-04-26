@@ -1,8 +1,8 @@
 import type { SupportedLanguage } from "@/shared/adapters/types"
-import { jaPrompt } from "./ja"
-import { enPrompt } from "./en"
+import { jaSystemPrompt } from "./ja"
+import { enSystemPrompt } from "./en"
 
-export function buildPrompt(text: string, lang: SupportedLanguage): string {
-  if (lang === "ja") return jaPrompt(text)
-  return enPrompt(text)
+export function buildSystemPrompt(lang: SupportedLanguage): string {
+  if (lang === "ja") return jaSystemPrompt
+  return enSystemPrompt
 }

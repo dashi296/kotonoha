@@ -1,5 +1,5 @@
 import { fetch } from "@tauri-apps/plugin-http"
-import { buildPrompt } from "@/shared/prompts"
+import { buildSystemPrompt } from "@/shared/prompts"
 import type { ModelAdapter, SupportedLanguage } from "./types"
 
 export class OllamaAdapter implements ModelAdapter {
@@ -16,12 +16,15 @@ export class OllamaAdapter implements ModelAdapter {
     prompt: string,
     lang: SupportedLanguage
   ): AsyncIterable<string> {
-    const response = await fetch(`${this.baseUrl}/api/generate`, {
+    const response = await fetch(`${this.baseUrl}/api/chat`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         model: this.model,
-        prompt: buildPrompt(prompt, lang),
+        messages: [
+          { role: "system", content: buildSystemPrompt(lang) },
+          { role: "user", content: prompt },
+        ],
         stream: true,
       }),
     })
@@ -43,8 +46,8 @@ export class OllamaAdapter implements ModelAdapter {
 
       for (const line of lines.filter(Boolean)) {
         try {
-          const parsed = JSON.parse(line) as { response: string; done: boolean }
-          if (parsed.response) yield parsed.response
+          const parsed = JSON.parse(line) as { message?: { content: string }; done: boolean }
+          if (parsed.message?.content) yield parsed.message.content
           if (parsed.done) return
         } catch {
           // skip malformed line
@@ -52,11 +55,10 @@ export class OllamaAdapter implements ModelAdapter {
       }
 
       if (done) {
-        // Flush any content remaining in buffer when stream closes without trailing newline
         if (buffer.trim()) {
           try {
-            const parsed = JSON.parse(buffer) as { response: string; done: boolean }
-            if (parsed.response) yield parsed.response
+            const parsed = JSON.parse(buffer) as { message?: { content: string }; done: boolean }
+            if (parsed.message?.content) yield parsed.message.content
           } catch {}
         }
         break
