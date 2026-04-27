@@ -132,22 +132,13 @@ pub async fn start_pull(
 
     let mut stream = response.bytes_stream();
     let mut buffer = String::new();
-    let cancel_fut = state.cancel_notify.notified();
-    tokio::pin!(cancel_fut);
 
-    loop {
-        // Catch cancels that arrived after the drain but before cancel_fut was polled
+    // Poll-based loop: check flag after each received chunk so that any pulling
+    // digests in the chunk are already tracked before cancel_pull snapshots them.
+    while let Some(chunk) = stream.next().await {
         if state.cancel_flag.load(Ordering::Acquire) {
             break;
         }
-        let chunk = tokio::select! {
-            biased;
-            _ = &mut cancel_fut => break,
-            result = stream.next() => match result {
-                None => break,
-                Some(r) => r,
-            },
-        };
         match chunk {
             Err(e) => return Err(e.to_string()),
             Ok(bytes) => {
@@ -186,7 +177,7 @@ pub async fn start_pull(
                 }
             }
         }
-    }
+    } // end while let
 
     if state.cancel_flag.load(Ordering::Acquire) {
         Ok(())

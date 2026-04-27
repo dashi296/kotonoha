@@ -17,10 +17,17 @@ fn is_ollama_running() -> bool {
 }
 
 #[tauri::command]
-fn get_ollama_status(failed: State<'_, SidecarFailed>) -> &'static str {
+fn get_ollama_status(
+    failed: State<'_, SidecarFailed>,
+    process: State<'_, OllamaProcess>,
+) -> &'static str {
     if is_ollama_running() {
         "running"
     } else if failed.0.load(Ordering::Acquire) {
+        "not_installed"
+    } else if process.0.lock().map_or(true, |g| g.is_none()) {
+        // No sidecar was started (app launched while external Ollama was running).
+        // Treat port-closed as unavailable rather than "starting".
         "not_installed"
     } else {
         "starting"
