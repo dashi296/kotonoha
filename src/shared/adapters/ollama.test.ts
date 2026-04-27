@@ -15,9 +15,9 @@ describe("OllamaAdapter", () => {
   describe("stream", () => {
     it("ストリーミングでトークンを順番に返す", async () => {
       const chunks = [
-        JSON.stringify({ response: "承知", done: false }),
-        JSON.stringify({ response: "しました", done: false }),
-        JSON.stringify({ response: "。", done: true }),
+        JSON.stringify({ message: { role: "assistant", content: "承知" }, done: false }),
+        JSON.stringify({ message: { role: "assistant", content: "しました" }, done: false }),
+        JSON.stringify({ message: { role: "assistant", content: "。" }, done: true }),
       ].join("\n") + "\n"
 
       const encoder = new TextEncoder()

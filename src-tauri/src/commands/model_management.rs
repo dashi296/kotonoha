@@ -4,6 +4,7 @@ use serde::{Deserialize, Serialize};
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::Mutex;
 use tauri::{AppHandle, Emitter, State};
+use tokio::sync::Notify;
 
 fn map_request_err(e: reqwest::Error) -> String {
     if e.is_connect() {
@@ -16,6 +17,7 @@ fn map_request_err(e: reqwest::Error) -> String {
 pub struct PullState {
     pub client: Client,
     pub cancel_flag: AtomicBool,
+    pub cancel_notify: Notify,
     pub tracked_digests: Mutex<Vec<String>>,
 }
 
@@ -24,6 +26,7 @@ impl PullState {
         Self {
             client: Client::new(),
             cancel_flag: AtomicBool::new(false),
+            cancel_notify: Notify::new(),
             tracked_digests: Mutex::new(Vec::new()),
         }
     }
@@ -108,6 +111,13 @@ pub async fn start_pull(
         digests.clear();
     }
 
+    // Drain any permit stored by a cancel_pull that fired before this pull began
+    tokio::select! {
+        biased;
+        _ = state.cancel_notify.notified() => {},
+        _ = async {} => {},
+    }
+
     let client = state.client.clone();
     let response = client
         .post("http://localhost:11434/api/pull")
@@ -123,6 +133,8 @@ pub async fn start_pull(
     let mut stream = response.bytes_stream();
     let mut buffer = String::new();
 
+    // Poll-based loop: check flag after each received chunk so that any pulling
+    // digests in the chunk are already tracked before cancel_pull snapshots them.
     while let Some(chunk) = stream.next().await {
         if state.cancel_flag.load(Ordering::Acquire) {
             break;
@@ -165,7 +177,7 @@ pub async fn start_pull(
                 }
             }
         }
-    }
+    } // end while let
 
     if state.cancel_flag.load(Ordering::Acquire) {
         Ok(())
@@ -177,6 +189,7 @@ pub async fn start_pull(
 #[tauri::command]
 pub async fn cancel_pull(state: State<'_, PullState>) -> Result<(), String> {
     state.cancel_flag.store(true, Ordering::Release);
+    state.cancel_notify.notify_one();
 
     // Note: a digest added by start_pull between the snapshot and the clear below
     // will be removed from the list without being deleted. This is a minor race
