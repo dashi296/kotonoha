@@ -3,13 +3,14 @@ mod commands;
 use commands::model_management::{cancel_pull, delete_model, list_models, start_pull, PullState};
 use std::net::TcpStream;
 use std::sync::atomic::{AtomicBool, Ordering};
-use std::sync::Mutex;
+use std::sync::{Arc, Mutex};
 use tauri::{Manager, State};
-use tauri_plugin_shell::process::CommandChild;
+use tauri_plugin_shell::process::{CommandChild, CommandEvent};
 use tauri_plugin_shell::ShellExt;
 
 struct OllamaProcess(Mutex<Option<CommandChild>>);
-struct SidecarFailed(AtomicBool);
+struct SidecarFailed(Arc<AtomicBool>);
+struct SidecarShuttingDown(Arc<AtomicBool>);
 
 fn is_ollama_running() -> bool {
     TcpStream::connect("127.0.0.1:11434").is_ok()
@@ -34,20 +35,37 @@ pub fn run() {
         .plugin(tauri_plugin_http::init())
         .plugin(tauri_plugin_shell::init())
         .setup(|app| {
-            let sidecar_failed = SidecarFailed(AtomicBool::new(false));
+            let failed_flag = Arc::new(AtomicBool::new(false));
+            let shutting_down_flag = Arc::new(AtomicBool::new(false));
+            let sidecar_failed = SidecarFailed(failed_flag.clone());
+            let sidecar_shutting_down = SidecarShuttingDown(shutting_down_flag.clone());
             let child = if !is_ollama_running() {
                 match app.handle().shell().sidecar("ollama") {
                     Ok(cmd) => match cmd.args(["serve"]).spawn() {
-                        Ok((_, child)) => Some(child),
+                        Ok((mut receiver, child)) => {
+                            let flag = failed_flag.clone();
+                            let sd = shutting_down_flag.clone();
+                            tauri::async_runtime::spawn(async move {
+                                while let Some(event) = receiver.recv().await {
+                                    if let CommandEvent::Terminated(_) = event {
+                                        if !sd.load(Ordering::Acquire) && !is_ollama_running() {
+                                            flag.store(true, Ordering::Release);
+                                        }
+                                        break;
+                                    }
+                                }
+                            });
+                            Some(child)
+                        }
                         Err(e) => {
                             eprintln!("Failed to start Ollama sidecar: {e}");
-                            sidecar_failed.0.store(true, Ordering::Release);
+                            failed_flag.store(true, Ordering::Release);
                             None
                         }
                     },
                     Err(e) => {
                         eprintln!("Ollama sidecar not found: {e}");
-                        sidecar_failed.0.store(true, Ordering::Release);
+                        failed_flag.store(true, Ordering::Release);
                         None
                     }
                 }
@@ -55,12 +73,17 @@ pub fn run() {
                 None
             };
             app.manage(sidecar_failed);
+            app.manage(sidecar_shutting_down);
             app.manage(OllamaProcess(Mutex::new(child)));
             app.manage(PullState::new());
             Ok(())
         })
         .on_window_event(|window, event| {
             if let tauri::WindowEvent::Destroyed = event {
+                window
+                    .state::<SidecarShuttingDown>()
+                    .0
+                    .store(true, Ordering::Release);
                 if let Ok(mut guard) = window.state::<OllamaProcess>().0.lock() {
                     if let Some(child) = guard.take() {
                         let _ = child.kill();

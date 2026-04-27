@@ -3,7 +3,8 @@ import { useState, useEffect } from "react"
 
 export type OllamaStatus = "loading" | "not_installed" | "starting" | "running"
 
-const MAX_RETRIES = 15 // 2000ms × 15 = 30秒でタイムアウト
+// Fallback for sidecars that spawn successfully but never bind the port
+const STARTING_TIMEOUT_MS = 120_000
 
 export function useOllamaStatus() {
   const [status, setStatus] = useState<OllamaStatus>("loading")
@@ -11,21 +12,26 @@ export function useOllamaStatus() {
   useEffect(() => {
     let cancelled = false
     let timer: ReturnType<typeof setTimeout>
-    let retries = 0
+    let startingStart: number | null = null
 
     const check = async () => {
       try {
         const s = await invoke<OllamaStatus>("get_ollama_status")
         if (cancelled) return
-        setStatus(s)
         if (s === "starting") {
-          if (retries++ < MAX_RETRIES) {
-            timer = setTimeout(check, 2000)
-          } else {
+          if (startingStart === null) startingStart = Date.now()
+          if (Date.now() - startingStart >= STARTING_TIMEOUT_MS) {
             setStatus("not_installed")
-            // Keep polling slowly so the UI recovers if Ollama eventually starts
-            timer = setTimeout(() => { retries = 0; check() }, 5000)
+            timer = setTimeout(check, 5000)
+          } else {
+            setStatus(s)
+            timer = setTimeout(check, 2000)
           }
+        } else {
+          startingStart = null
+          setStatus(s)
+          // Keep polling so the UI reflects status changes (Ollama stops or is installed manually)
+          timer = setTimeout(check, 5000)
         }
       } catch {
         if (!cancelled) {
